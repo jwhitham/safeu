@@ -956,6 +956,9 @@ int safeu_encrypt_block (struct t_safeu_struct * ac,
 {
 	int ok = 0;
 
+	if ((!ac) || (!block_in) || (!block_out) || (!block_out_size)) {
+		goto error;
+	}
 	(* block_out) = NULL;
 	(* block_out_size) = 0;
 	ac->position_in = 0;
@@ -977,6 +980,7 @@ int safeu_encrypt_block (struct t_safeu_struct * ac,
 		ok = 1;
 	}
 
+error:
 	clear_up (ac);
 
 	return ok;
@@ -988,6 +992,9 @@ int safeu_decrypt_block (struct t_safeu_struct * ac,
 {
 	int ok = 0;
 
+	if ((!ac) || (!block_in) || (!block_out) || (!block_out_size)) {
+		goto error;
+	}
 	(* block_out) = NULL;
 	(* block_out_size) = 0;
 	ac->position_in = 0;
@@ -1006,6 +1013,7 @@ int safeu_decrypt_block (struct t_safeu_struct * ac,
 		ok = 1;
 	}
 
+error:
 	clear_up (ac);
 
 	return ok;
@@ -1072,6 +1080,10 @@ void safeu_test (t_safeu * ac)
 {
 	uint32_t i;
 
+	if (!ac) {
+		fputs (AC "ac == NULL: cannot run tests\n", stderr);
+		abort ();
+	}
 	if (ac->number_of_identities == 0) {
 		fputs (AC "no identities: cannot run tests\n", stderr);
 		abort ();
@@ -1096,7 +1108,9 @@ void safeu_test (t_safeu * ac)
 
 const char * safeu_get_fingerprint (struct t_safeu_struct * ac, unsigned index)
 {
-	if (index < ac->number_of_identities) {
+	if (!ac) {
+		return NULL;
+	} else if (index < ac->number_of_identities) {
 		return (char *) ac->identities[index].fingerprint->text;
 	} else {
 		return NULL;
@@ -1105,6 +1119,12 @@ const char * safeu_get_fingerprint (struct t_safeu_struct * ac, unsigned index)
 
 const char * safeu_get_socket_name (struct t_safeu_struct * ac)
 {
+	if (!ac) {
+		return NULL;
+	}
+	if (!ac->agent_socket_name) {
+		return NULL;
+	}
 	return (char *) ac->agent_socket_name->text;
 }
 
