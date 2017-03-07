@@ -7,13 +7,13 @@
 extern "C" {
 #endif
 
-#include "acrypt.h"
+#include "libsafeu.h"
 
-int acrypt_encrypt_a_file (struct t_acrypt_struct * ac,
+int safeu_encrypt_a_file (struct t_safeu_struct * ac,
 							const char * src_fname, const char * dest_fname);
-int acrypt_decrypt_a_file (struct t_acrypt_struct * ac,
+int safeu_decrypt_a_file (struct t_safeu_struct * ac,
 							const char * src_fname, const char * dest_fname);
-void acrypt_files_test (struct t_acrypt_struct * ac);
+void safeu_files_test (struct t_safeu_struct * ac);
 
 
 #ifdef __cplusplus

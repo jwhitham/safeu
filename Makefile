@@ -1,23 +1,23 @@
 INCLUDES=-I.
-LIBS=-L. -lacrypt -lssl
-CFLAGS=-g -Wall -Werror $(INCLUDES)
+LIBS=-L. -lsafeu -lssl
+CFLAGS=-g -Wall -Werror -O2 $(INCLUDES)
 ICFLAGS=-g $(INCLUDES)
-LIBACRYPT=libacrypt.a
+LIBSAFEU=libsafeu.a
 LIBTEST=tests/libtest
-ACRYPT=acrypt
+SAFEU=safeu
 
-all: $(LIBACRYPT) $(ACRYPT)
+all: $(LIBSAFEU) $(SAFEU)
 
 clean:
-	rm -f $(LIBACRYPT) *.o tests/libtest.o $(LIBTEST) instr_acrypt $(ACRYPT)
+	rm -f $(LIBSAFEU) *.o tests/libtest.o $(LIBTEST) $(SAFEU)
 
-$(LIBACRYPT): acrypt.o
-	ar r $(LIBACRYPT) acrypt.o
+$(LIBSAFEU): libsafeu.o
+	ar r $(LIBSAFEU) libsafeu.o
 
-$(ACRYPT): acrypt_main.o acrypt_files.o $(LIBACRYPT)
-	$(CC) -o $(ACRYPT) acrypt_main.o acrypt_files.o $(CFLAGS) $(LIBS)
+$(SAFEU): main.o files.o $(LIBSAFEU)
+	$(CC) -o $(SAFEU) main.o files.o $(CFLAGS) $(LIBS)
 
-$(LIBTEST): tests/libtest.o $(LIBACRYPT)
+$(LIBTEST): tests/libtest.o $(LIBSAFEU)
 	$(CC) -o $(LIBTEST) tests/libtest.o $(CFLAGS) $(LIBS)
 
 test:

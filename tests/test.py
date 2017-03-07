@@ -3,7 +3,7 @@
 
 import subprocess, os, sys, signal, hashlib
 
-PROGRAM = "acrypt"
+PROGRAM = "safeu"
 LAUNCH = "../" + PROGRAM
 LIBTEST = "libtest"
 SSH_AUTH_SOCK = "SSH_AUTH_SOCK"
@@ -208,7 +208,7 @@ def agent_tests():
 	test_run([], "libtest ok", expected_rc = 0, program = LIBTEST)
 
 	# built-in self test
-	test_run(["--test-acrypt"], "test passed", expected_rc = 0)
+	test_run(["--test-safeu"], "test passed", expected_rc = 0)
 
 
 def main():
@@ -227,8 +227,8 @@ def main():
 	print ("All test cases passed")
 
 if "--instr" in sys.argv:
-	PROGRAM = "instr_acrypt"
-	LAUNCH = "../instr_acrypt"
+	PROGRAM = "instr_safeu"
+	LAUNCH = "../instr_safeu"
 
 try:
 	cleanup()

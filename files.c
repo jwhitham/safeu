@@ -9,11 +9,11 @@
 
 #include <openssl/rand.h>
 
-#include "acrypt.h"
-#include "acrypt_files.h"
+#include "libsafeu.h"
+#include "files.h"
 
 #define MAX_PASSWORD_SIZE	(256 - 64) 
-#define AC					"acrypt: "
+#define AC					"safeu: "
 
 
 
@@ -86,7 +86,7 @@ error:
 }
 
 
-int acrypt_encrypt_a_file (struct t_acrypt_struct * ac,
+int safeu_encrypt_a_file (struct t_safeu_struct * ac,
 							const char * src_fname, const char * dest_fname)
 {
 	int ok = 1;
@@ -96,14 +96,14 @@ int acrypt_encrypt_a_file (struct t_acrypt_struct * ac,
 	unsigned file_out_size = 0;
 
 	ok = ok && read_file (src_fname, &file_in_data, &file_in_size);
-	ok = ok && acrypt_encrypt_block (ac, file_in_data, file_in_size, &file_out_data, &file_out_size);
+	ok = ok && safeu_encrypt_block (ac, file_in_data, file_in_size, &file_out_data, &file_out_size);
 	ok = ok && write_file (dest_fname, file_out_data, file_out_size);
 	free (file_in_data);
 	free (file_out_data);
 	return ok;
 }
 
-int acrypt_decrypt_a_file (struct t_acrypt_struct * ac,
+int safeu_decrypt_a_file (struct t_safeu_struct * ac,
 							const char * src_fname, const char * dest_fname)
 {
 	int ok = 1;
@@ -113,21 +113,21 @@ int acrypt_decrypt_a_file (struct t_acrypt_struct * ac,
 	unsigned file_out_size = 0;
 
 	ok = ok && read_file (src_fname, &file_in_data, &file_in_size);
-	ok = ok && acrypt_decrypt_block (ac, file_in_data, file_in_size, &file_out_data, &file_out_size);
+	ok = ok && safeu_decrypt_block (ac, file_in_data, file_in_size, &file_out_data, &file_out_size);
 	ok = ok && write_file (dest_fname, file_out_data, file_out_size);
 	free (file_in_data);
 	free (file_out_data);
 	return ok;
 }
 
-static unsigned get_number_of_identities (struct t_acrypt_struct * ac)
+static unsigned get_number_of_identities (struct t_safeu_struct * ac)
 {
 	unsigned i;
-	for (i = 0; acrypt_get_fingerprint (ac, i); i++) {}
+	for (i = 0; safeu_get_fingerprint (ac, i); i++) {}
 	return i;
 }
 
-static void test_file_encryption (struct t_acrypt_struct * ac, uint64_t size)
+static void test_file_encryption (struct t_safeu_struct * ac, uint64_t size)
 {
 	const char * test1 = "test1.tmp";
 	const char * test2 = "test2.tmp";
@@ -149,10 +149,10 @@ static void test_file_encryption (struct t_acrypt_struct * ac, uint64_t size)
 		abort ();
 	}
 
-	if (!acrypt_encrypt_a_file (ac, test1, test2)) {
+	if (!safeu_encrypt_a_file (ac, test1, test2)) {
 		abort ();
 	}
-	if (!acrypt_decrypt_a_file (ac, test2, test3)) {
+	if (!safeu_decrypt_a_file (ac, test2, test3)) {
 		abort ();
 	}
 	if (!read_file (test3, &check, &check_size)) {
@@ -174,7 +174,7 @@ static void test_file_encryption (struct t_acrypt_struct * ac, uint64_t size)
 	unlink (test3);
 }
 
-void acrypt_files_test (struct t_acrypt_struct * ac)
+void safeu_files_test (struct t_safeu_struct * ac)
 {
 	uint32_t i;
 

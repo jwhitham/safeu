@@ -6,8 +6,8 @@
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>
-#include "acrypt.h"
-#include "acrypt_files.h"
+#include "libsafeu.h"
+#include "files.h"
 
 typedef struct t_option_struct {
 	struct option	op;
@@ -21,7 +21,7 @@ static const t_option all_options[] = {
 		"Decrypt file <d> writing to output file <o>."},
 	{{"list",			no_argument,		0,	'l'},
 		"List all keys stored in agent."},
-	{{"test-acrypt",	no_argument,		0,	'T'},
+	{{"test-safeu",	no_argument,		0,	'T'},
 		NULL},
 	{{"help",			no_argument,		0,	'h'},
 		NULL},
@@ -42,7 +42,7 @@ static void show_help (const char * advice)
 	if (!advice) {
 		advice = "no operation specified";
 	}
-	printf ("acrypt: %s\n\n", advice);
+	printf ("safeu: %s\n\n", advice);
 		
 	for (i = 0; all_options[i].op.name != NULL; i++) {
 		if (all_options[i].help != NULL) {
@@ -61,12 +61,12 @@ static void show_help (const char * advice)
 
 static void no_keys (void)
 {
-	fputs ("acrypt: error: agent does not hold any keys\n", stderr);
+	fputs ("safeu: error: agent does not hold any keys\n", stderr);
 }
 
 static void malloc_error (void)
 {
-	fputs ("acrypt: unable to allocate memory\n", stderr);
+	fputs ("safeu: unable to allocate memory\n", stderr);
 	exit (1);
 }
 
@@ -84,7 +84,7 @@ int main (int argc, char ** argv)
 	char * output = NULL;
 	struct option * long_options = NULL;
 	char * short_options = NULL;
-	struct t_acrypt_struct * ac = NULL;
+	struct t_safeu_struct * ac = NULL;
 	const char * ssh_auth_sock = NULL;
    int ok = 0;
 
@@ -231,9 +231,9 @@ int main (int argc, char ** argv)
 		}
 	}
 
-	ac = acrypt_new (ssh_auth_sock);
+	ac = safeu_new (ssh_auth_sock);
    if (!ac) {
-      /* error reported by acrypt library */
+      /* error reported by safeu library */
       return 1;
    }
 
@@ -246,7 +246,7 @@ int main (int argc, char ** argv)
 				show_help ("--output is required for --encrypt");
 				return 1;
 			}
-			if (acrypt_get_fingerprint (ac, 0) == NULL) {
+			if (safeu_get_fingerprint (ac, 0) == NULL) {
 				no_keys ();
 				return 1;
 			}
@@ -256,17 +256,17 @@ int main (int argc, char ** argv)
 				show_help ("--output is required for --decrypt");
 				return 1;
 			}
-			if (acrypt_get_fingerprint (ac, 0) == NULL) {
+			if (safeu_get_fingerprint (ac, 0) == NULL) {
 				no_keys ();
 				return 1;
 			}
 			break;
 		case test:
 			{
-				printf ("calling acrypt_files_test()\n");
-				acrypt_files_test (ac);
-				printf ("calling acrypt_test()\n");
-				acrypt_free (ac);
+				printf ("calling safeu_files_test()\n");
+				safeu_files_test (ac);
+				printf ("calling safeu_test()\n");
+				safeu_free (ac);
 				printf ("test passed\n");
 			}
 			return 0;
@@ -276,7 +276,7 @@ int main (int argc, char ** argv)
 				int match = 0;
 
 				do {
-					const char * f = acrypt_get_fingerprint (ac, index);
+					const char * f = safeu_get_fingerprint (ac, index);
 					if (f == NULL) {
 						break;
 					}
@@ -289,12 +289,12 @@ int main (int argc, char ** argv)
 					no_keys ();
 					return 1;
 				}
-				acrypt_free (ac);
+				safeu_free (ac);
 			}
 			return 0;
 		case search:
 			/* results of search */
-			printf ("SSH_AUTH_SOCK=%s; export SSH_AUTH_SOCK\n", acrypt_get_socket_name (ac));
+			printf ("SSH_AUTH_SOCK=%s; export SSH_AUTH_SOCK\n", safeu_get_socket_name (ac));
 			return 0;
 		default:
 			/* should be unreachable */
@@ -307,13 +307,13 @@ int main (int argc, char ** argv)
 	switch (mode) {
 		case encrypt:
 			/* matched key */
-			ok = acrypt_encrypt_a_file (ac, file, output);
-			acrypt_free (ac);
+			ok = safeu_encrypt_a_file (ac, file, output);
+			safeu_free (ac);
 			return ok ? 0 : 1;
 		case decrypt:
 			/* connect to agent and search keys */
-			ok = acrypt_decrypt_a_file (ac, file, output);
-			acrypt_free (ac);
+			ok = safeu_decrypt_a_file (ac, file, output);
+			safeu_free (ac);
 			return ok ? 0 : 1;
 		default:
 			/* should be unreachable */

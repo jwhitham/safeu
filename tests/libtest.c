@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "acrypt.h"
+#include "libsafeu.h"
 
 
 
@@ -51,18 +51,18 @@ const int password2_len = 240;
 
 int main (void)
 {
-	struct t_acrypt_struct * ac;
+	struct t_safeu_struct * ac;
 	char * p = NULL;
 	char * tmp = NULL;
 	unsigned s;
 
-	ac = acrypt_new (NULL);
+	ac = safeu_new (NULL);
 	if (!ac) {
-	  /* error reported by acrypt library */
+	  /* error reported by safeu library */
 	  return 1;
 	}
 
-	if (!acrypt_decrypt_block (ac, password1_data, password1_len, &p, &s)) {
+	if (!safeu_decrypt_block (ac, password1_data, password1_len, &p, &s)) {
 		fputs ("decrypt password1 failed\n", stderr);
 		return 1;
 	}
@@ -70,7 +70,7 @@ int main (void)
 		fputs ("password1 is incorrect\n", stderr);
 		return 1;
 	}
-	if (!acrypt_decrypt_block (ac, password2_data, password2_len, &tmp, &s)) {
+	if (!safeu_decrypt_block (ac, password2_data, password2_len, &tmp, &s)) {
 		fputs ("decrypt password2 failed\n", stderr);
 		return 1;
 	}
@@ -78,7 +78,7 @@ int main (void)
 		fputs ("password2 is incorrect\n", stderr);
 		return 1;
 	}
-	acrypt_free (ac);
+	safeu_free (ac);
 	free (p);
 	free (tmp);
 

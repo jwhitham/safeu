@@ -19,7 +19,7 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
-#include "acrypt.h"
+#include "libsafeu.h"
 #include "ssh.h"
 
 #define MAX_STRING_SIZE		(1 << 16)
@@ -33,7 +33,7 @@
 #else
 #define MAX_IDENTITIES		(1 << 12)
 #endif
-#define AC					"acrypt: "
+#define AC					"safeu: "
 
 typedef struct t_string_struct {
 	uint32_t	size;
@@ -75,7 +75,7 @@ typedef struct t_key_header_struct {
 } t_key_header;
 
 
-typedef struct t_acrypt_struct {
+typedef struct t_safeu_struct {
 	/* connection to agent */
 	int socket_handle;
 	uint32_t number_of_identities;
@@ -92,13 +92,13 @@ typedef struct t_acrypt_struct {
 	uint64_t position_out;
 	uint64_t block_out_size;
 	uint8_t * block_out;
-} t_acrypt;
+} t_safeu;
 
-static uint64_t block_get_fsize_and_rewind (t_acrypt * ac);
-static uint64_t block_read_input (t_acrypt * ac, void * data, uint64_t max_size);
-static int block_write_output (t_acrypt * ac, const void * data, uint64_t size);
+static uint64_t block_get_fsize_and_rewind (t_safeu * ac);
+static uint64_t block_read_input (t_safeu * ac, void * data, uint64_t max_size);
+static int block_write_output (t_safeu * ac, const void * data, uint64_t size);
 
-static void send_data (t_acrypt * ac, const void * data, uint32_t size)
+static void send_data (t_safeu * ac, const void * data, uint32_t size)
 {
 	if (ac->socket_error_flag) {
 		return;
@@ -109,24 +109,24 @@ static void send_data (t_acrypt * ac, const void * data, uint32_t size)
 	}
 }
 
-static void send_int (t_acrypt * ac, uint32_t v)
+static void send_int (t_safeu * ac, uint32_t v)
 {
 	v = htonl (v);
 	send_data (ac, &v, 4);
 }
 
-static void send_byte (t_acrypt * ac, uint8_t v)
+static void send_byte (t_safeu * ac, uint8_t v)
 {
 	send_data (ac, &v, 1);
 }
 
-static void send_string (t_acrypt * ac, const t_string * v)
+static void send_string (t_safeu * ac, const t_string * v)
 {
 	send_int (ac, v->size);
 	send_data (ac, v->text, v->size);
 }
 
-static void receive_data (t_acrypt * ac, void * data, uint32_t size)
+static void receive_data (t_safeu * ac, void * data, uint32_t size)
 {
 	if (ac->socket_error_flag) {
 		memset (data, 0, size);
@@ -139,14 +139,14 @@ static void receive_data (t_acrypt * ac, void * data, uint32_t size)
 	}
 }
 
-static uint32_t receive_int (t_acrypt * ac)
+static uint32_t receive_int (t_safeu * ac)
 {
 	uint32_t v = 0;
 	receive_data (ac, &v, 4);
 	return ntohl (v);
 }
 
-static uint8_t receive_byte (t_acrypt * ac)
+static uint8_t receive_byte (t_safeu * ac)
 {
 	uint8_t v = 0;
 	receive_data (ac, &v, 1);
@@ -197,7 +197,7 @@ static void free_string (t_string * data)
 	}
 } */
 
-static t_string * receive_string (t_acrypt * ac)
+static t_string * receive_string (t_safeu * ac)
 {
 	uint32_t size = receive_int (ac);
 	t_string * block = NULL;
@@ -312,7 +312,7 @@ static void ctr_encrypt (const uint8_t * src, uint8_t * dest, unsigned size, AES
 }
 
 
-static t_string * get_signature (t_acrypt * ac, t_string * sign_this, t_identity * identity)
+static t_string * get_signature (t_safeu * ac, t_string * sign_this, t_identity * identity)
 {
 	uint32_t receive_size;
 	uint8_t receive_type;
@@ -366,7 +366,7 @@ error:
 	return hash_buffer;
 }
 
-static int encrypt (struct t_acrypt_struct * ac)
+static int encrypt (struct t_safeu_struct * ac)
 {
 	uint8_t plaintext_hash[SHA512_SIZE];
 	uint8_t key_data_hash[SHA512_SIZE];
@@ -480,7 +480,7 @@ error:
 }
 
 
-static int decrypt (t_acrypt * ac)
+static int decrypt (t_safeu * ac)
 {
 	uint8_t key_data_hash[SHA512_SIZE];
 	uint8_t plaintext[FILE_BLOCK_SIZE];
@@ -647,7 +647,7 @@ error:
 	return ok;
 }
 
-static uint64_t block_read_input (t_acrypt * ac, void * data, uint64_t max_size)
+static uint64_t block_read_input (t_safeu * ac, void * data, uint64_t max_size)
 {
 	uint64_t size = 0;
 	if (ac->position_in < ac->block_in_size) {
@@ -663,13 +663,13 @@ static uint64_t block_read_input (t_acrypt * ac, void * data, uint64_t max_size)
 	return size;
 }
 
-static uint64_t block_get_fsize_and_rewind (t_acrypt * ac)
+static uint64_t block_get_fsize_and_rewind (t_safeu * ac)
 {
 	ac->position_in = 0;
 	return ac->block_in_size;
 }
 
-static int block_write_output (t_acrypt * ac, const void * data, uint64_t size)
+static int block_write_output (t_safeu * ac, const void * data, uint64_t size)
 {
 	if (((uint64_t) ac->position_out + size) > (uint64_t) ac->block_out_size) {
 		fprintf (stderr, AC "block write size overflow, %u+%u > %u\n",
@@ -681,7 +681,7 @@ static int block_write_output (t_acrypt * ac, const void * data, uint64_t size)
 	return 1;
 }
 
-void clear_up (struct t_acrypt_struct * ac)
+void clear_up (struct t_safeu_struct * ac)
 {
 	if (!ac) {
 		return;
@@ -694,7 +694,7 @@ void clear_up (struct t_acrypt_struct * ac)
 	ac->block_out = NULL;
 }
 
-static int connect_to_agent (t_acrypt * ac, const char * agent_sock)
+static int connect_to_agent (t_safeu * ac, const char * agent_sock)
 {
 	struct sockaddr_un addr;
 	struct stat s;
@@ -731,7 +731,7 @@ static int connect_to_agent (t_acrypt * ac, const char * agent_sock)
 	return 1;
 }
 
-static int search_for_agent (t_acrypt * ac)
+static int search_for_agent (t_safeu * ac)
 {
 	const char * tmp_path;
 	struct dirent * tmp_de = NULL;
@@ -789,11 +789,11 @@ static int permitted_key_type (t_string * key_type)
 	return strcmp ((char *) key_type->text, "ssh-rsa") == 0;
 }
 
-t_acrypt * acrypt_new (const char * ssh_auth_sock)
+t_safeu * safeu_new (const char * ssh_auth_sock)
 {
-	t_acrypt * ac = NULL;
+	t_safeu * ac = NULL;
 
-	ac = calloc (1, sizeof (t_acrypt));
+	ac = calloc (1, sizeof (t_safeu));
 	if (!ac) {
 		malloc_error ();
 		goto error;
@@ -927,7 +927,7 @@ error:
 	return NULL;
 }
 
-void acrypt_free (t_acrypt * ac)
+void safeu_free (t_safeu * ac)
 {
 	uint32_t i;
 
@@ -949,7 +949,7 @@ void acrypt_free (t_acrypt * ac)
 	free (ac);
 }
 
-int acrypt_encrypt_block (struct t_acrypt_struct * ac,
+int safeu_encrypt_block (struct t_safeu_struct * ac,
 							const char * block_in, unsigned block_in_size,
 							char ** block_out, unsigned * block_out_size)
 {
@@ -981,7 +981,7 @@ int acrypt_encrypt_block (struct t_acrypt_struct * ac,
 	return ok;
 }
 
-int acrypt_decrypt_block (struct t_acrypt_struct * ac,
+int safeu_decrypt_block (struct t_safeu_struct * ac,
 							const char * block_in, unsigned block_in_size,
 							char ** block_out, unsigned * block_out_size)
 {
@@ -1010,7 +1010,7 @@ int acrypt_decrypt_block (struct t_acrypt_struct * ac,
 	return ok;
 }
 
-static void test_block_encryption (t_acrypt * ac, uint64_t size, uint64_t enlarge_by)
+static void test_block_encryption (t_safeu * ac, uint64_t size, uint64_t enlarge_by)
 {
 	unsigned check_size = 0;
 	unsigned ciphertext_size = 0;
@@ -1028,7 +1028,7 @@ static void test_block_encryption (t_acrypt * ac, uint64_t size, uint64_t enlarg
 
 	RAND_bytes ((uint8_t *) plaintext, size);
 
-	rc = acrypt_encrypt_block (ac, plaintext, size, &ciphertext, &ciphertext_size);
+	rc = safeu_encrypt_block (ac, plaintext, size, &ciphertext, &ciphertext_size);
 
 	if ((!rc) || (!ciphertext)) {
 		fputs (AC "encrypt return error\n", stderr);
@@ -1048,7 +1048,7 @@ static void test_block_encryption (t_acrypt * ac, uint64_t size, uint64_t enlarg
 		}
 	}
 
-	rc = acrypt_decrypt_block (ac, ciphertext, ciphertext_size, &check, &check_size);
+	rc = safeu_decrypt_block (ac, ciphertext, ciphertext_size, &check, &check_size);
 	if ((!rc) || (!check)) {
 		fputs (AC "decrypt return error\n", stderr);
 		abort ();
@@ -1067,7 +1067,7 @@ static void test_block_encryption (t_acrypt * ac, uint64_t size, uint64_t enlarg
 	free (check);
 }
 
-void acrypt_test (t_acrypt * ac)
+void safeu_test (t_safeu * ac)
 {
 	uint32_t i;
 
@@ -1093,7 +1093,7 @@ void acrypt_test (t_acrypt * ac)
 	test_block_encryption (ac, FILE_BLOCK_SIZE * 2, 1234);
 }
 
-const char * acrypt_get_fingerprint (struct t_acrypt_struct * ac, unsigned index)
+const char * safeu_get_fingerprint (struct t_safeu_struct * ac, unsigned index)
 {
 	if (index < ac->number_of_identities) {
 		return (char *) ac->identities[index].fingerprint->text;
@@ -1102,7 +1102,7 @@ const char * acrypt_get_fingerprint (struct t_acrypt_struct * ac, unsigned index
 	}
 }
 
-const char * acrypt_get_socket_name (struct t_acrypt_struct * ac)
+const char * safeu_get_socket_name (struct t_safeu_struct * ac)
 {
 	return (char *) ac->agent_socket_name->text;
 }

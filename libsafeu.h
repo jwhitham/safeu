@@ -15,19 +15,19 @@ extern "C" {
 #define CIPHER_KEY_SIZE		(CIPHER_KEY_BITS / 8)
 #define FILE_BLOCK_SIZE		(1 << 16)
 
-struct t_acrypt_struct;
+struct t_safeu_struct;
 
-int acrypt_encrypt_block (struct t_acrypt_struct * ac,
+int safeu_encrypt_block (struct t_safeu_struct * ac,
 							const char * block_in, unsigned block_in_size,
 							char ** block_out, unsigned * block_out_size);
-int acrypt_decrypt_block (struct t_acrypt_struct * ac,
+int safeu_decrypt_block (struct t_safeu_struct * ac,
 							const char * block_in, unsigned block_in_size,
 							char ** block_out, unsigned * block_out_size);
-struct t_acrypt_struct * acrypt_new (const char * ssh_auth_sock);
-void acrypt_free (struct t_acrypt_struct * ac);
-void acrypt_test (struct t_acrypt_struct * ac);
-const char * acrypt_get_fingerprint (struct t_acrypt_struct * ac, unsigned index);
-const char * acrypt_get_socket_name (struct t_acrypt_struct * ac);
+struct t_safeu_struct * safeu_new (const char * ssh_auth_sock);
+void safeu_free (struct t_safeu_struct * ac);
+void safeu_test (struct t_safeu_struct * ac);
+const char * safeu_get_fingerprint (struct t_safeu_struct * ac, unsigned index);
+const char * safeu_get_socket_name (struct t_safeu_struct * ac);
 
 #ifdef __cplusplus
 }
