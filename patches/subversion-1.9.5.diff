@@ -1,0 +1,442 @@
+Index: build/ac-macros/safeu.m4
+===================================================================
+--- build/ac-macros/safeu.m4	(.../subversion-1.9.5-vanilla)	(nonexistent)
++++ build/ac-macros/safeu.m4	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -0,0 +1,79 @@
++dnl ===================================================================
++dnl   Licensed to the Apache Software Foundation (ASF) under one
++dnl   or more contributor license agreements.  See the NOTICE file
++dnl   distributed with this work for additional information
++dnl   regarding copyright ownership.  The ASF licenses this file
++dnl   to you under the Apache License, Version 2.0 (the
++dnl   "License"); you may not use this file except in compliance
++dnl   with the License.  You may obtain a copy of the License at
++dnl
++dnl     http://www.apache.org/licenses/LICENSE-2.0
++dnl
++dnl   Unless required by applicable law or agreed to in writing,
++dnl   software distributed under the License is distributed on an
++dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++dnl   KIND, either express or implied.  See the License for the
++dnl   specific language governing permissions and limitations
++dnl   under the License.
++dnl ===================================================================
++dnl
++dnl  SVN_LIB_SAFEU
++dnl
++dnl  Check configure options and assign variables related to
++dnl  libsafeu. libsafeu is part of the SSH Agent File Encryption Utility
++dnl  and may be found at https://github.com/jwhitham/safeu/ 
++dnl  libsafeu encrypts and decrypts passwords using libsafeu, which in turn
++dnl  uses the SSH authentication agent running on your system (if any).
++dnl
++
++AC_DEFUN(SVN_LIB_SAFEU,
++[
++  AC_ARG_WITH(safeu,
++    [AS_HELP_STRING([[--with-safeu[=PREFIX]]],
++                    [safeu support])],
++                    [svn_lib_safeu="$withval"],
++                    [svn_lib_safeu="no"])
++
++  AC_MSG_CHECKING([whether to look for safeu])
++  if test "$svn_lib_safeu" != "no"; then
++    AC_MSG_RESULT([yes])
++    if test "$svn_lib_safeu" != "yes"; then
++      AC_MSG_CHECKING([for libsafeu.h])
++      SAFEU_H="$svn_lib_safeu/libsafeu.h"
++      if test -f "$SAFEU_H"; then
++        AC_MSG_RESULT([yes])
++        AC_MSG_CHECKING([for libsafeu.a])
++        SAFEU_LIB="$svn_lib_safeu/libsafeu.a"
++        if test -f "$SAFEU_LIB"; then
++          AC_MSG_RESULT([yes])
++        else
++          SAFEU_H=""
++          SAFEU_LIB=""
++          AC_MSG_RESULT([no])
++        fi
++      else
++        SAFEU_H=""
++        AC_MSG_RESULT([no])
++      fi
++    fi
++    if test -n "$SAFEU_H"; then
++      AC_MSG_CHECKING([for safeu])
++      old_CPPFLAGS="$CPPFLAGS"
++      old_CFLAGS="$CFLAGS"
++      old_LIBS="$LIBS"
++      CFLAGS=""
++      SVN_SAFEU_INCLUDES="-I$svn_lib_safeu"
++      SVN_SAFEU_LIBS="-L$svn_lib_safeu -lsafeu"
++      CPPFLAGS="$CPPFLAGS $SVN_SAFEU_INCLUDES"
++      CFLAGS="$old_CFLAGS"
++      svn_lib_safeu="yes"
++    else
++      AC_MSG_ERROR([cannot find safeu])
++      svn_lib_safeu="no"
++    fi
++  else
++    AC_MSG_RESULT([no])
++  fi
++  AC_SUBST(SVN_SAFEU_INCLUDES)
++  AC_SUBST(SVN_SAFEU_LIBS)
++])
+Index: subversion/libsvn_subr/safeu_auth.c
+===================================================================
+--- subversion/libsvn_subr/safeu_auth.c	(.../subversion-1.9.5-vanilla)	(nonexistent)
++++ subversion/libsvn_subr/safeu_auth.c	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -0,0 +1,157 @@
++/**
++ * This is like svn_auth_get_simple_provider() but it encrypts and
++ * decrypts passwords using libsafeu, which in turn uses the SSH
++ * authentication agent running on your system (if any).
++ *
++ * libsafeu is part of the SSH Agent File Encryption Utility
++ * and may be found at https://github.com/jwhitham/safeu/ 
++ *
++ */
++
++#include <apr_pools.h>
++#include "svn_auth.h"
++#include "svn_error.h"
++#include "svn_utf.h"
++#include "svn_config.h"
++#include "svn_user.h"
++
++#include "private/svn_auth_private.h"
++
++#include "svn_private_config.h"
++
++
++#include <apr_base64.h>
++
++#if defined(SVN_HAVE_SAFEU)
++
++#include <libsafeu.h>
++
++/* Implementation of svn_auth__password_set_t that encrypts
++   the incoming password using SSH Agent File Encryption Utility (safeu). */
++static svn_error_t *
++safeu_password_encrypter(svn_boolean_t *done,
++                           apr_hash_t *creds,
++                           const char *realmstring,
++                           const char *username,
++                           const char *in,
++                           apr_hash_t *parameters,
++                           svn_boolean_t non_interactive,
++                           apr_pool_t *pool)
++{
++  struct t_safeu_struct * ac;
++  char *ciphertext = NULL;
++  char *out = NULL;
++  unsigned out_size = 0;
++   
++  ac = safeu_new (NULL);
++  if (safeu_encrypt_block (ac, in, strlen (in), &out, &out_size)) {
++    ciphertext = apr_palloc(pool, apr_base64_encode_len(out_size));
++    apr_base64_encode(ciphertext, (const char*)out, out_size);
++    SVN_ERR(svn_auth__simple_password_set(done, creds, realmstring, username,
++                                          ciphertext, parameters,
++                                          non_interactive, pool));
++  }
++  free (out);
++  safeu_free (ac);
++  return SVN_NO_ERROR;
++}
++
++/* Implementation of svn_auth__password_get_t that decrypts
++   the incoming password using SSH Agent File Encryption Utility (safeu)
++   and verifies its validity. */
++static svn_error_t *
++safeu_password_decrypter(svn_boolean_t *done,
++                           const char **out,
++                           apr_hash_t *creds,
++                           const char *realmstring,
++                           const char *username,
++                           apr_hash_t *parameters,
++                           svn_boolean_t non_interactive,
++                           apr_pool_t *pool)
++{
++  svn_boolean_t decrypted = FALSE;
++  char *ciphertext = NULL;
++  const char *in = NULL;
++  char *out_tmp = NULL;
++  unsigned out_size = 0;
++  struct t_safeu_struct * ac;
++
++  SVN_ERR(svn_auth__simple_password_get(done, &in, creds, realmstring, username,
++                                        parameters, non_interactive, pool));
++  if (!*done)
++    return SVN_NO_ERROR;
++
++  ciphertext = apr_palloc(pool, apr_base64_decode_len(in));
++  apr_base64_decode((char*)ciphertext, in);
++
++  ac = safeu_new (NULL);
++  if (safeu_decrypt_block (ac, ciphertext, apr_base64_decode_len (in), &out_tmp, &out_size)) {
++    decrypted = TRUE;
++    *out = apr_pstrndup(pool, (const char*)out_tmp, out_size);
++  }
++  free (out_tmp);
++
++  *done = decrypted;
++  return SVN_NO_ERROR;
++}
++
++/* Get cached encrypted credentials from the simple provider's cache. */
++static svn_error_t *
++safeu_simple_first_creds(void **credentials,
++                           void **iter_baton,
++                           void *provider_baton,
++                           apr_hash_t *parameters,
++                           const char *realmstring,
++                           apr_pool_t *pool)
++{
++  return svn_auth__simple_creds_cache_get(credentials,
++                                             iter_baton,
++                                             provider_baton,
++                                             parameters,
++                                             realmstring,
++                                             safeu_password_decrypter,
++                                             SVN_AUTH__SAFEU_PASSWORD_TYPE,
++                                             pool);
++}
++
++/* Save encrypted credentials to the simple provider's cache. */
++static svn_error_t *
++safeu_simple_save_creds(svn_boolean_t *saved,
++                          void *credentials,
++                          void *provider_baton,
++                          apr_hash_t *parameters,
++                          const char *realmstring,
++                          apr_pool_t *pool)
++{
++  return svn_auth__simple_creds_cache_set(saved, credentials,
++                                            provider_baton,
++                                            parameters,
++                                            realmstring,
++                                            safeu_password_encrypter,
++                                            SVN_AUTH__SAFEU_PASSWORD_TYPE,
++                                            pool);
++}
++
++static const svn_auth_provider_t safeu_simple_provider = {
++  SVN_AUTH_CRED_SIMPLE,
++  safeu_simple_first_creds,
++  NULL,
++  safeu_simple_save_creds
++};
++
++#endif
++
++/* Public API */
++void
++svn_auth_get_safeu_simple_provider(svn_auth_provider_object_t **provider,
++                                     apr_pool_t *pool)
++{
++  *provider = NULL;
++#if defined(SVN_HAVE_SAFEU)
++  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
++
++  po->vtable = &safeu_simple_provider;
++  *provider = po;
++#endif
++}
++
+Index: subversion/libsvn_subr/auth.c
+===================================================================
+--- subversion/libsvn_subr/auth.c	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ subversion/libsvn_subr/auth.c	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -603,6 +603,14 @@
+           svn_auth__get_windows_ssl_server_authority_provider(provider, pool);
+         }
+ #endif
++
++#if defined(SVN_HAVE_SAFEU)
++      if (strcmp(provider_name, "safeu") == 0 &&
++          strcmp(provider_type, "simple") == 0)
++        {
++          svn_auth_get_safeu_simple_provider(provider, pool);
++        }
++#endif
+     }
+ 
+   return SVN_NO_ERROR;
+@@ -622,7 +630,7 @@
+   { if (p) APR_ARRAY_PUSH(list, svn_auth_provider_object_t *) = p; }
+ 
+ #define SVN__DEFAULT_AUTH_PROVIDER_LIST \
+-         "gnome-keyring,kwallet,keychain,gpg-agent,windows-cryptoapi"
++         "gnome-keyring,kwallet,keychain,gpg-agent,windows-cryptoapi,safeu"
+ 
+   *providers = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
+ 
+@@ -710,6 +718,15 @@
+                                                           pool));
+           SVN__MAYBE_ADD_PROVIDER(*providers, provider);
+         }
++      /* Windows */
++      else if (apr_strnatcmp(password_store, "safeu") == 0)
++        {
++          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
++                                                          "safeu",
++                                                          "simple",
++                                                          pool));
++          SVN__MAYBE_ADD_PROVIDER(*providers, provider);
++        }
+     }
+ 
+   /* Windows has two providers without a store to allow easy access to
+Index: subversion/libsvn_subr/libsvn_subr.pc.in
+===================================================================
+--- subversion/libsvn_subr/libsvn_subr.pc.in	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ subversion/libsvn_subr/libsvn_subr.pc.in	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -8,5 +8,5 @@
+ Version: @PACKAGE_VERSION@
+ Requires:  apr-util-@SVN_APR_MAJOR_VERSION@ apr-@SVN_APR_MAJOR_VERSION@
+ Requires.private:  sqlite3
+-Libs: -L${libdir}  -lsvn_subr @SVN_XML_LIBS@ @SVN_ZLIB_LIBS@ @SVN_APR_MEMCACHE_LIBS@ @SVN_MAGIC_LIBS@ @SVN_INTL_LIBS@
++Libs: -L${libdir}  -lsvn_subr @SVN_XML_LIBS@ @SVN_ZLIB_LIBS@ @SVN_APR_MEMCACHE_LIBS@ @SVN_MAGIC_LIBS@ @SVN_INTL_LIBS@ @SVN_SAFEU_LIBS@
+ Cflags: -I${includedir}
+Index: subversion/libsvn_subr/simple_providers.c
+===================================================================
+--- subversion/libsvn_subr/simple_providers.c	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ subversion/libsvn_subr/simple_providers.c	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -342,6 +342,7 @@
+        * in plaintext is OK. */
+       if (passtype &&
+            (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
++            || strcmp(passtype, SVN_AUTH__SAFEU_PASSWORD_TYPE) == 0
+             || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
+             || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
+             || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0
+Index: subversion/include/private/svn_auth_private.h
+===================================================================
+--- subversion/include/private/svn_auth_private.h	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ subversion/include/private/svn_auth_private.h	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -61,6 +61,7 @@
+  * assumed that your provider stores passwords in plaintext. */
+ #define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
+ #define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
++#define SVN_AUTH__SAFEU_PASSWORD_TYPE             "safeu"
+ #define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
+ #define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
+ #define SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE      "gnome-keyring"
+Index: subversion/include/svn_auth.h
+===================================================================
+--- subversion/include/svn_auth.h	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ subversion/include/svn_auth.h	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -1172,6 +1172,22 @@
+ #endif /* !defined(WIN32) || defined(DOXYGEN) */
+ 
+ 
++/**
++ * Set @a *provider to an authentication provider of type @c
++ * svn_auth_cred_simple_t that gets/sets information from the user's
++ * ~/.subversion configuration directory.  Allocate @a *provider in
++ * @a pool.
++ *
++ * This is like svn_auth_get_simple_provider() but it encrypts and
++ * decrypts passwords using libsafeu, which in turn uses the SSH
++ * authentication agent running on your system (if any).
++ *
++ */
++void
++svn_auth_get_safeu_simple_provider(svn_auth_provider_object_t **provider,
++                                    apr_pool_t *pool);
++
++
+ /** Set @a *provider to an authentication provider of type @c
+  * svn_auth_cred_username_t that gets/sets information from a user's
+  * ~/.subversion configuration directory.  Allocate @a *provider in
+Index: subversion/svn/help-cmd.c
+===================================================================
+--- subversion/svn/help-cmd.c	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ subversion/svn/help-cmd.c	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -174,6 +174,9 @@
+ #ifdef SVN_HAVE_KWALLET
+   svn_stringbuf_appendcstr(version_footer, "* KWallet (KDE)\n");
+ #endif
++#ifdef SVN_HAVE_SAFEU
++  svn_stringbuf_appendcstr(version_footer, "* safeu (https://github.com/jwhitham/safeu)\n");
++#endif
+ 
+   return svn_opt_print_help4(os,
+                              "svn",   /* ### erm, derive somehow? */
+Index: Makefile.in
+===================================================================
+--- Makefile.in	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ Makefile.in	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -54,6 +54,7 @@
+ SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
+ SVN_XML_LIBS = @SVN_XML_LIBS@
+ SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
++SVN_SAFEU_LIBS = @SVN_SAFEU_LIBS@
+ 
+ LIBS = @LIBS@
+ 
+@@ -130,7 +131,7 @@
+            @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ \
+            @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
+            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
+-           @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@
++           @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@ @SVN_SAFEU_INCLUDES@
+ 
+ APACHE_INCLUDES = @APACHE_INCLUDES@
+ APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
+Index: aclocal.m4
+===================================================================
+--- aclocal.m4	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ aclocal.m4	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -38,6 +38,7 @@
+ sinclude(build/ac-macros/berkeley-db.m4)
+ sinclude(build/ac-macros/compiler.m4)
+ sinclude(build/ac-macros/ctypesgen.m4)
++sinclude(build/ac-macros/safeu.m4)
+ sinclude(build/ac-macros/java.m4)
+ sinclude(build/ac-macros/sasl.m4)
+ sinclude(build/ac-macros/serf.m4)
+Index: build.conf
+===================================================================
+--- build.conf	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ build.conf	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -364,7 +364,7 @@
+ type = lib
+ install = fsmod-lib
+ path = subversion/libsvn_subr
+-libs = aprutil apriconv apr xml zlib apr_memcache sqlite magic intl
++libs = aprutil apriconv apr xml zlib apr_memcache sqlite magic intl safeu
+ msvc-libs = kernel32.lib advapi32.lib shfolder.lib ole32.lib
+             crypt32.lib version.lib
+ msvc-export = 
+@@ -1400,6 +1400,10 @@
+ external-lib = $(SVN_GNOME_KEYRING_LIBS)
+ pkg-config = gnome-keyring-1
+ 
++[safeu]
++type = lib
++external-lib = $(SVN_SAFEU_LIBS)
++
+ [kwallet]
+ type = lib
+ external-lib = $(SVN_KWALLET_LIBS)
+Index: configure.ac
+===================================================================
+--- configure.ac	(.../subversion-1.9.5-vanilla)	(revision 517)
++++ configure.ac	(.../subversion-1.9.5-safeu)	(revision 517)
+@@ -128,6 +128,14 @@
+             [Defined if support for Serf is enabled])
+ fi
+ 
++dnl Search for safeu
++SVN_LIB_SAFEU
++
++if test "$svn_lib_safeu" = "yes"; then
++  AC_DEFINE([SVN_HAVE_SAFEU], 1,
++            [Defined if support for safeu])
++fi
++
+ dnl Search for apr_memcache (only affects fs_fs)
+ SVN_LIB_APR_MEMCACHE
+ 
