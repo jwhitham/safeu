@@ -67,5 +67,25 @@ or kwallet to save my passwords. I could use gpg-agent. But I already have a pri
 in my SSH authentication agent.
 
 safeu allows me to use keys in the SSH agent to secure passwords. There is a patch for SVN 1.9.5
-which adds the feature.
+which adds the feature. This patch should be applied to the stable 1.9.5 source code; you
+must then run 'autogen.sh' before 'configure --with-safeu'. Here are the setup steps I am using to build
+a statically linked 'svn' binary which is quite portable across many different machines.
+
+   cd $HOME/safeu
+   make INCLUDES=-I$HOME/openssl-1.1.0d/install/include/ LIBS="-L$HOME/openssl-1.1.0d/install/lib -lcrypto -lssl -lpthread -ldl"
+
+   cd $HOME/subversion-1.9.5
+   ./autogen.sh
+   ./configure --prefix=$PWD/install \
+      --with-apr=$HOME/apr-1.5.2/install/ --with-apr-util=$HOME/apr-util-1.5.4/install/ \
+      --with-serf=$HOME/serf-1.3.9/install/ \
+      --enable-static --disable-shared \
+      --with-safeu=$HOME/safeu \
+      --with-libs=$HOME/openssl-1.1.0d/install/lib/
+   make \
+      SVN_APR_LIBS="-L$HOME/apr-1.5.2/install/lib -lapr-1 \
+               -L$HOME/openssl-1.1.0d/install/lib -lssl -lcrypto"
+   make install
+
+
 
