@@ -1,7 +1,14 @@
+/* SSH Agent File Encryption Utility (safeu)
+ * Copyright (C) Jack Whitham 2016-2017
+ * 
+ * https://github.com/jwhitham/safeu/
+ * https://www.jwhitham.org/
+ * 
+ * ex: set tabstop=4 noexpandtab shiftwidth=4:
+ */
 #ifndef ACRYPT_H
 #define ACRYPT_H
 
-/* ex: set tabstop=4 noexpandtab shiftwidth=4: */
 
 #ifdef __cplusplus
 extern "C" {
