@@ -4,7 +4,6 @@
  * https://github.com/jwhitham/safeu/
  * https://www.jwhitham.org/
  * 
- * ex: set tabstop=4 noexpandtab shiftwidth=4:
  */
 
 #include <stdio.h>
@@ -202,3 +201,4 @@ void safeu_files_test (struct t_safeu_struct * ac)
 	}
 }
 
+/* ex: set tabstop=4 noexpandtab shiftwidth=4: */

@@ -4,7 +4,6 @@
  * https://github.com/jwhitham/safeu/
  * https://www.jwhitham.org/
  * 
- * ex: set tabstop=4 noexpandtab shiftwidth=4:
  */
 
 #include <stdio.h>
@@ -1113,3 +1112,4 @@ const char * safeu_get_socket_name (struct t_safeu_struct * ac)
 	return (char *) ac->agent_socket_name->text;
 }
 
+/* ex: set tabstop=4 noexpandtab shiftwidth=4: */

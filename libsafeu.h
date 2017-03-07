@@ -4,10 +4,10 @@
  * https://github.com/jwhitham/safeu/
  * https://www.jwhitham.org/
  * 
- * ex: set tabstop=4 noexpandtab shiftwidth=4:
  */
-#ifndef ACRYPT_H
-#define ACRYPT_H
+
+#ifndef SAFEU_H
+#define SAFEU_H
 
 
 #ifdef __cplusplus
@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 #define SHA512_SIZE			(512 / 8)
-#define MD5_SIZE			(16)
+#define MD5_SIZE				(16)
 #define CIPHER_BLOCK_BITS	(128)
 #define CIPHER_BLOCK_SIZE	(CIPHER_BLOCK_BITS / 8)
 #define CIPHER_KEY_BITS		(256)
@@ -41,3 +41,4 @@ const char * safeu_get_socket_name (struct t_safeu_struct * ac);
 #endif
 #endif
 
+/* ex: set tabstop=4 noexpandtab shiftwidth=4: */

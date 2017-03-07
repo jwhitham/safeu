@@ -4,7 +4,6 @@
  * https://github.com/jwhitham/safeu/
  * https://www.jwhitham.org/
  * 
- * ex: set tabstop=4 noexpandtab shiftwidth=4:
  */
 
 #include <stdio.h>
@@ -93,3 +92,4 @@ int main (void)
 	return 0;
 }
 
+/* ex: set tabstop=4 noexpandtab shiftwidth=4: */

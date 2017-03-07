@@ -4,11 +4,10 @@
  * https://github.com/jwhitham/safeu/
  * https://www.jwhitham.org/
  * 
- * ex: set tabstop=4 noexpandtab shiftwidth=4:
  */
 
-#ifndef ACRYPT_FILES_H
-#define ACRYPT_FILES_H
+#ifndef SAFEU_FILES_H
+#define SAFEU_FILES_H
 
 
 #ifdef __cplusplus
@@ -29,3 +28,4 @@ void safeu_files_test (struct t_safeu_struct * ac);
 #endif
 #endif
 
+/* ex: set tabstop=4 noexpandtab shiftwidth=4: */
