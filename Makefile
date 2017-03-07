@@ -7,10 +7,9 @@
 # ex: set tabstop=4 noexpandtab shiftwidth=4:
 #
 
-INCLUDES=-I.
-LIBS=-L. -lsafeu -lssl
-CFLAGS=-g -Wall -Werror -O2 $(INCLUDES)
-ICFLAGS=-g $(INCLUDES)
+INCLUDES=
+LIBS=-lssl
+CFLAGS=-g -Wall -Werror -O2 -I. $(INCLUDES)
 LIBSAFEU=libsafeu.a
 LIBTEST=tests/libtest
 SAFEU=safeu
@@ -24,10 +23,10 @@ $(LIBSAFEU): libsafeu.o
 	ar r $(LIBSAFEU) libsafeu.o
 
 $(SAFEU): main.o files.o $(LIBSAFEU)
-	$(CC) -o $(SAFEU) main.o files.o $(CFLAGS) $(LIBS)
+	$(CC) -o $(SAFEU) main.o files.o $(CFLAGS) $(LIBSAFEU) $(LIBS)
 
 $(LIBTEST): tests/libtest.o $(LIBSAFEU)
-	$(CC) -o $(LIBTEST) tests/libtest.o $(CFLAGS) $(LIBS)
+	$(CC) -o $(LIBTEST) tests/libtest.o $(CFLAGS) $(LIBSAFEU) $(LIBS)
 
 test:
 	cd tests; python test.py
