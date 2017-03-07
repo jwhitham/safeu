@@ -32,10 +32,10 @@ Search for an SSH agent and print out the SSH_AUTH_SOCK name.
 I use "tmux" to keep persistent sessions running on various servers. When I reconnect, I use --search 
 to re-establish a connection to my SSH agent. I do this with the following .bashrc function:
 
-	ssh-fix ()
-	{
-	   eval `safeu --search`
-	}
+    ssh-fix ()
+    {
+       eval `safeu --search`
+    }
 
 
 # Internals
@@ -71,21 +71,21 @@ which adds the feature. This patch should be applied to the stable 1.9.5 source 
 must then run 'autogen.sh' before 'configure --with-safeu'. Here are the setup steps I am using to build
 a statically linked 'svn' binary which is quite portable across many different machines.
 
-   cd $HOME/safeu
-   make INCLUDES=-I$HOME/openssl-1.1.0d/install/include/ LIBS="-L$HOME/openssl-1.1.0d/install/lib -lcrypto -lssl -lpthread -ldl"
+    cd $HOME/safeu
+    make INCLUDES=-I$HOME/openssl-1.1.0d/install/include/ LIBS="-L$HOME/openssl-1.1.0d/install/lib -lcrypto -lssl -lpthread -ldl"
 
-   cd $HOME/subversion-1.9.5
-   ./autogen.sh
-   ./configure --prefix=$PWD/install \
-      --with-apr=$HOME/apr-1.5.2/install/ --with-apr-util=$HOME/apr-util-1.5.4/install/ \
-      --with-serf=$HOME/serf-1.3.9/install/ \
-      --enable-static --disable-shared \
-      --with-safeu=$HOME/safeu \
-      --with-libs=$HOME/openssl-1.1.0d/install/lib/
-   make \
-      SVN_APR_LIBS="-L$HOME/apr-1.5.2/install/lib -lapr-1 \
-               -L$HOME/openssl-1.1.0d/install/lib -lssl -lcrypto"
-   make install
+    cd $HOME/subversion-1.9.5
+    ./autogen.sh
+    ./configure --prefix=$PWD/install \
+       --with-apr=$HOME/apr-1.5.2/install/ --with-apr-util=$HOME/apr-util-1.5.4/install/ \
+       --with-serf=$HOME/serf-1.3.9/install/ \
+       --enable-static --disable-shared \
+       --with-safeu=$HOME/safeu \
+       --with-libs=$HOME/openssl-1.1.0d/install/lib/
+    make \
+       SVN_APR_LIBS="-L$HOME/apr-1.5.2/install/lib -lapr-1 \
+                -L$HOME/openssl-1.1.0d/install/lib -lssl -lcrypto"
+    make install
 
 
 
