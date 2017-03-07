@@ -32,7 +32,8 @@ Search for an SSH agent and print out the SSH_AUTH_SOCK name.
     $ safeu --search
     SSH_AUTH_SOCK=/tmp/ssh-5vmq6Id9LW/agent.2313; export SSH_AUTH_SOCK
 
-I use --search with a bash alias which re-establishes a connection to the current SSH agent.
+I use "tmux" to keep persistent sessions running on various servers. When I reconnect, I use --search 
+to re-establish a connection to my SSH agent. I do this with the following .bashrc function:
 
 	ssh-fix ()
 	{

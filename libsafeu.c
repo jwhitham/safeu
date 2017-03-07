@@ -27,18 +27,14 @@
 #include "libsafeu.h"
 #include "ssh.h"
 
-#define MAX_STRING_SIZE		(1 << 16)
+#define MAX_STRING_SIZE			(1 << 16)
 #define HEADER_FILE_ID_DWORD	0x31337
 #define HEADER_PWD_ID_DWORD		0xe1ee7
 #define HEADER_BLOCK_ID_DWORD	0xe1337
-#define FP_BUF_SIZE			(256)
-#define VERSION_DWORD		2
-#ifdef COVERAGE_TEST
-#define MAX_IDENTITIES		4
-#else
-#define MAX_IDENTITIES		(1 << 12)
-#endif
-#define AC					"safeu: "
+#define FP_BUF_SIZE				(256)
+#define VERSION_WORD			2
+#define MAX_IDENTITIES			(1 << 12)
+#define AC						"safeu: "
 
 typedef struct t_string_struct {
 	uint32_t	size;
@@ -399,7 +395,7 @@ static int encrypt (struct t_safeu_struct * ac)
 	/* generate header */
 	memset (&header, 0, sizeof (header));
 	header.id = HEADER_FILE_ID_DWORD;
-	header.version = VERSION_DWORD;
+	header.version = VERSION_WORD;
 	memcpy (header.plaintext_hash, plaintext_hash, sizeof (header.plaintext_hash));
 	header.size = size = block_get_fsize_and_rewind (ac);
 	padded_size = ((size + CIPHER_BLOCK_SIZE - 1) / CIPHER_BLOCK_SIZE) * CIPHER_BLOCK_SIZE;
@@ -1111,5 +1107,11 @@ const char * safeu_get_socket_name (struct t_safeu_struct * ac)
 {
 	return (char *) ac->agent_socket_name->text;
 }
+
+int safeu_version (void)
+{
+	return VERSION_WORD;
+}
+
 
 /* ex: set tabstop=4 noexpandtab shiftwidth=4: */

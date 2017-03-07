@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 #define SHA512_SIZE			(512 / 8)
-#define MD5_SIZE				(16)
+#define MD5_SIZE			(16)
 #define CIPHER_BLOCK_BITS	(128)
 #define CIPHER_BLOCK_SIZE	(CIPHER_BLOCK_BITS / 8)
 #define CIPHER_KEY_BITS		(256)
@@ -35,6 +35,7 @@ void safeu_free (struct t_safeu_struct * ac);
 void safeu_test (struct t_safeu_struct * ac);
 const char * safeu_get_fingerprint (struct t_safeu_struct * ac, unsigned index);
 const char * safeu_get_socket_name (struct t_safeu_struct * ac);
+int safeu_version (void);
 
 #ifdef __cplusplus
 }
