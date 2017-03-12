@@ -278,7 +278,6 @@ int main (int argc, char ** argv)
 		case list_all_keys:
 			{
 				unsigned index = 0;
-				int match = 0;
 
 				do {
 					const char * f = safeu_get_fingerprint (ac, index);
@@ -286,7 +285,6 @@ int main (int argc, char ** argv)
 						break;
 					}
 					index ++;
-					match = 1;
 					printf ("%s\n", f);
 				} while (1);
 

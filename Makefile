@@ -8,7 +8,7 @@
 #
 
 INCLUDES=
-LIBS=-lssl
+LIBS=-lssl -lcrypto
 CFLAGS=-g -Wall -Werror -O2 -I. $(INCLUDES)
 LIBSAFEU=libsafeu.a
 LIBTEST=tests/libtest
